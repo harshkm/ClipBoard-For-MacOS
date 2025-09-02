@@ -14,14 +14,132 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, 
                                QLabel, QLineEdit, QTextEdit, QSplitter,
                                QSystemTrayIcon, QMenu, QMessageBox,
-                               QProgressBar, QFileDialog)
+                               QProgressBar, QFileDialog, QDialog, QFrame)
 from PySide6.QtCore import Qt, QThread, Signal, QTimer, QCoreApplication
-from PySide6.QtGui import QFont, QKeySequence, QShortcut, QAction
+from PySide6.QtGui import QFont, QKeySequence, QShortcut, QAction, QIcon
 import pyperclip
 
 # Import our existing modules
 from clipboard_storage import ClipboardStorage
 from settings_manager import SettingsManager
+
+
+class BeautifulConfirmDialog(QDialog):
+    """Clean, professional confirmation dialog that matches the app's style"""
+    
+    def __init__(self, parent=None, title="Confirm", message="", icon_type="delete"):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setFixedSize(450, 200)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+        # Create main layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        
+        # Create main container with clean styling
+        container = QFrame()
+        container.setObjectName("dialogContainer")
+        container.setStyleSheet("""
+            QFrame#dialogContainer {
+                background: #1e1e1e;
+                border: 1px solid #333333;
+                border-radius: 12px;
+            }
+        """)
+        
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(24, 16, 24, 20)
+        container_layout.setSpacing(20)
+        
+        # Title (clean, centered, moved up)
+        title_label = QLabel(title)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 18px;
+                font-weight: 600;
+                color: #ffffff;
+                background: transparent;
+            }
+        """)
+        container_layout.addWidget(title_label)
+        
+        # Message (clean, centered, with proper word wrap)
+        message_label = QLabel(message)
+        message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+                color: #ffffff;
+                background: transparent;
+                line-height: 1;
+            }
+        """)
+        container_layout.addWidget(message_label)
+        
+        # Buttons (clean, modern, centered)
+        button_layout = QHBoxLayout()
+        button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # No button (secondary)
+        no_button = QPushButton("Cancel")
+        no_button.setFixedSize(100, 40)
+        no_button.setStyleSheet("""
+            QPushButton {
+                background: #333333;
+                color: #ffffff;
+                border: 1px solid #444444;
+                border-radius: 8px;
+                font-weight: 500;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background: #404040;
+                border-color: #555555;
+            }
+            QPushButton:pressed {
+                background: #2a2a2a;
+            }
+        """)
+        no_button.clicked.connect(self.reject)
+        button_layout.addWidget(no_button)
+        
+        # Add spacing between buttons
+        button_layout.addSpacing(16)
+        
+        # Yes button (primary)
+        yes_button = QPushButton("Delete")
+        yes_button.setFixedSize(100, 40)
+        yes_button.setStyleSheet("""
+            QPushButton {
+                background: #FF3B30;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background: #D70015;
+            }
+            QPushButton:pressed {
+                background: #B80012;
+            }
+        """)
+        yes_button.clicked.connect(self.accept)
+        button_layout.addWidget(yes_button)
+        
+        container_layout.addLayout(button_layout)
+        layout.addWidget(container)
+        
+        # Set default button and focus
+        yes_button.setDefault(True)
+        yes_button.setFocus()
+        yes_button.setAutoDefault(True)
 
 
 class SingleInstanceLock:
@@ -136,6 +254,7 @@ class ClipboardManagerGUI(QMainWindow):
         self.settings = SettingsManager()
         self.storage = ClipboardStorage()
         self.monitor_thread = ClipboardMonitorThread()
+        self.selection_mode = False  # Track if selection mode is enabled
         
         # Connect signals
         self.monitor_thread.clipboard_changed.connect(self.on_clipboard_changed)
@@ -193,7 +312,7 @@ class ClipboardManagerGUI(QMainWindow):
         self.setWindowTitle("Forever Clipboard Pro - GUI")
         self.setGeometry(800, 600, 1200, 800)
         
-        # Set window icon (if available)
+        # Set window icon to standard computer icon
         self.setWindowIcon(self.style().standardIcon(self.style().StandardPixmap.SP_ComputerIcon))
         
         # Create central widget and main layout
@@ -276,6 +395,8 @@ class ClipboardManagerGUI(QMainWindow):
         self.history_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.history_list.customContextMenuRequested.connect(self.show_context_menu)
         self.history_list.setAlternatingRowColors(True)
+        self.history_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.history_list.selectionModel().selectionChanged.connect(self.on_selection_changed)
         self.history_list.setStyleSheet("""
             QListWidget {
                 border: 2px solid #404040;
@@ -304,6 +425,73 @@ class ClipboardManagerGUI(QMainWindow):
             }
         """)
         left_layout.addWidget(self.history_list)
+        
+        # Selection controls
+        selection_layout = QHBoxLayout()
+        
+        # Enable Selection Mode button
+        self.selection_mode_btn = QPushButton("☐ Enable Selection Mode")
+        self.selection_mode_btn.clicked.connect(self.toggle_selection_mode)
+        self.selection_mode_btn.setStyleSheet("""
+            QPushButton {
+                padding: 6px 12px;
+                background: #404040;
+                color: white;
+                border: 1px solid #555555;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: #505050;
+                border-color: #666666;
+            }
+        """)
+        selection_layout.addWidget(self.selection_mode_btn)
+        
+        # Clear Selection button
+        self.clear_selection_btn = QPushButton("Clear Selection")
+        self.clear_selection_btn.clicked.connect(self.clear_selection)
+        self.clear_selection_btn.setStyleSheet("""
+            QPushButton {
+                padding: 6px 12px;
+                background: #404040;
+                color: white;
+                border: 1px solid #555555;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: #505050;
+                border-color: #666666;
+            }
+        """)
+        selection_layout.addWidget(self.clear_selection_btn)
+        
+        selection_layout.addStretch()
+        
+        # Bulk Delete button (initially hidden)
+        self.bulk_delete_btn = QPushButton("🗑️ Delete Selected")
+        self.bulk_delete_btn.clicked.connect(self.bulk_delete_selected)
+        self.bulk_delete_btn.setVisible(False)
+        self.bulk_delete_btn.setStyleSheet("""
+            QPushButton {
+                padding: 6px 12px;
+                background: #FF3B30;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: #D70015;
+            }
+        """)
+        selection_layout.addWidget(self.bulk_delete_btn)
+        
+        left_layout.addLayout(selection_layout)
         
         # Info label
         info_label = QLabel("💡 Double-click to copy • Right-click for copy/delete options")
@@ -509,6 +697,11 @@ class ClipboardManagerGUI(QMainWindow):
             tooltip = entry['content'][:200] + "..." if len(entry['content']) > 200 else entry['content']
             item.setToolTip(tooltip)
             
+            # Enable checkboxes when in selection mode
+            if self.selection_mode:
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Unchecked)
+            
             self.history_list.addItem(item)
             
         # Update statistics
@@ -537,6 +730,12 @@ class ClipboardManagerGUI(QMainWindow):
                 
             item.setText(preview_text)
             item.setData(Qt.ItemDataRole.UserRole, entry)
+            
+            # Enable checkboxes when in selection mode
+            if self.selection_mode:
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Unchecked)
+            
             self.history_list.addItem(item)
             
     def on_history_item_selected(self, item: QListWidgetItem):
@@ -582,6 +781,27 @@ class ClipboardManagerGUI(QMainWindow):
         # Separator
         context_menu.addSeparator()
         
+        # Multi-selection actions (only show if in selection mode and multiple items are checked)
+        if self.selection_mode:
+            checked_count = 0
+            for i in range(self.history_list.count()):
+                item = self.history_list.item(i)
+                if item.flags() & Qt.ItemFlag.ItemIsUserCheckable and item.checkState() == Qt.CheckState.Checked:
+                    checked_count += 1
+            
+            if checked_count > 1:
+                # Copy all checked
+                copy_selected_action = QAction(f"📋 Copy {checked_count} Selected", self)
+                copy_selected_action.triggered.connect(self.copy_selected_entries)
+                context_menu.addAction(copy_selected_action)
+                
+                # Delete all checked
+                delete_selected_action = QAction(f"🗑️ Delete {checked_count} Selected", self)
+                delete_selected_action.triggered.connect(self.bulk_delete_selected)
+                context_menu.addAction(delete_selected_action)
+                
+                context_menu.addSeparator()
+        
         # Entry info
         info_action = QAction(f"📅 {entry['timestamp']} • 📏 {entry['size_bytes']/1024:.1f} KB", self)
         info_action.setEnabled(False)
@@ -597,13 +817,16 @@ class ClipboardManagerGUI(QMainWindow):
         
     def delete_entry_from_context(self, entry):
         """Delete entry from context menu"""
-        reply = QMessageBox.question(
-            self, "Confirm Delete",
-            f"Are you sure you want to delete this entry?\n\n{entry['preview']}",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        # Create clean, professional dialog
+        dialog = BeautifulConfirmDialog(
+            self, 
+            title="Delete Entry", 
+            message=f"Are you sure you want to delete this entry?\n\n{entry['preview']}",
+            icon_type="delete"
         )
         
-        if reply == QMessageBox.StandardButton.Yes:
+        # Show dialog and get result
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self.storage.delete_entry(entry['id'])
             self.load_clipboard_history()
             self.content_viewer.clear()
@@ -617,20 +840,178 @@ class ClipboardManagerGUI(QMainWindow):
             if entry:
                 pyperclip.copy(entry['content'])
                 self.statusBar().showMessage(f"✅ Copied to clipboard: {entry['preview']}", 3000)
+                
+    def copy_selected_entries(self):
+        """Copy all selected entries to clipboard (concatenated)"""
+        if not self.selection_mode:
+            return
+            
+        # Count and collect checked items
+        checked_items = []
+        for i in range(self.history_list.count()):
+            item = self.history_list.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable and item.checkState() == Qt.CheckState.Checked:
+                entry = item.data(Qt.ItemDataRole.UserRole)
+                if entry:
+                    checked_items.append(entry)
+        
+        if not checked_items:
+            return
+            
+        # Concatenate all checked entries with newlines
+        all_content = [entry['content'] for entry in checked_items]
+        combined_content = '\n\n---\n\n'.join(all_content)
+        pyperclip.copy(combined_content)
+        self.statusBar().showMessage(f"✅ Copied {len(checked_items)} entries to clipboard", 3000)
                     
     def clear_all_history(self):
         """Clear all clipboard history"""
-        reply = QMessageBox.question(
-            self, "Confirm Clear All",
-            "Are you sure you want to clear all clipboard history? This cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        # Create clean, professional dialog
+        dialog = BeautifulConfirmDialog(
+            self, 
+            title="Clear All History", 
+            message="Are you sure you want to clear all clipboard history?\n\nThis action cannot be undone.",
+            icon_type="clear"
         )
         
-        if reply == QMessageBox.StandardButton.Yes:
+        # Show dialog and get result
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self.storage.clear_all_entries()
             self.load_clipboard_history()
             self.content_viewer.clear()
             self.entry_info.setText("No entry selected")
+            
+    def toggle_selection_mode(self):
+        """Toggle between normal and selection mode"""
+        self.selection_mode = not self.selection_mode
+        
+        if self.selection_mode:
+            # Enable selection mode
+            self.selection_mode_btn.setText("☑ Selection Mode Active")
+            self.selection_mode_btn.setStyleSheet("""
+                QPushButton {
+                    padding: 6px 12px;
+                    background: #007AFF;
+                    color: white;
+                    border: 1px solid #0056CC;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background: #0056CC;
+                    border-color: #004499;
+                }
+            """)
+            # Connect checkbox state changes to selection handler
+            self.history_list.itemChanged.connect(self.on_selection_changed)
+            self.load_clipboard_history()  # Refresh to show checkboxes
+        else:
+            # Disable selection mode
+            self.selection_mode_btn.setText("☐ Enable Selection Mode")
+            self.selection_mode_btn.setStyleSheet("""
+                QPushButton {
+                    padding: 6px 12px;
+                    background: #404040;
+                    color: white;
+                    border: 1px solid #555555;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background: #505050;
+                    border-color: #666666;
+                }
+            """)
+            # Disconnect checkbox state changes from selection handler
+            try:
+                self.history_list.itemChanged.disconnect(self.on_selection_changed)
+            except:
+                pass  # Ignore if not connected
+            self.load_clipboard_history()  # Refresh to hide checkboxes
+            
+    def on_selection_changed(self):
+        """Handle selection changes to show/hide bulk delete button"""
+        if not self.selection_mode:
+            return
+            
+        # Count checked items
+        checked_count = 0
+        for i in range(self.history_list.count()):
+            item = self.history_list.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable and item.checkState() == Qt.CheckState.Checked:
+                checked_count += 1
+        
+        self.bulk_delete_btn.setVisible(checked_count > 0)
+        
+        # Update selection count in button text
+        if checked_count > 0:
+            self.bulk_delete_btn.setText(f"🗑️ Delete Selected ({checked_count})")
+        else:
+            self.bulk_delete_btn.setText("🗑️ Delete Selected")
+            
+    def clear_selection(self):
+        """Clear all checkbox selections in the history list"""
+        if not self.selection_mode:
+            return
+            
+        for i in range(self.history_list.count()):
+            item = self.history_list.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
+                item.setCheckState(Qt.CheckState.Unchecked)
+        
+        # Force update selection count and button visibility
+        self.on_selection_changed()
+        
+    def bulk_delete_selected(self):
+        """Delete all checked entries"""
+        if not self.selection_mode:
+            return
+            
+        # Count and collect checked items
+        checked_entries = []
+        for i in range(self.history_list.count()):
+            item = self.history_list.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable and item.checkState() == Qt.CheckState.Checked:
+                entry = item.data(Qt.ItemDataRole.UserRole)
+                if entry:
+                    checked_entries.append(entry)
+        
+        if not checked_entries:
+            return
+            
+        # Create confirmation dialog
+        dialog = BeautifulConfirmDialog(
+            self,
+            title="Delete Selected Entries",
+            message=f"Are you sure you want to delete {len(checked_entries)} selected entries?\n\nThis action cannot be undone.",
+            icon_type="delete"
+        )
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Remove checked entries from storage
+            for entry in checked_entries:
+                self.storage.delete_entry(entry['id'])
+            
+            # Disconnect signals before reloading to prevent interference
+            if self.selection_mode:
+                try:
+                    self.history_list.itemChanged.disconnect(self.on_selection_changed)
+                except:
+                    pass
+            
+            # Reload and update display
+            self.load_clipboard_history()
+            self.content_viewer.clear()
+            self.entry_info.setText("No entry selected")
+            
+            # Reconnect signals after reload
+            if self.selection_mode:
+                self.history_list.itemChanged.connect(self.on_selection_changed)
+            
+            # Force update selection count and button visibility
+            self.on_selection_changed()
             
     def export_clipboard_data(self):
         """Export clipboard data to file"""
@@ -740,7 +1121,6 @@ def main():
         print(f"Error starting application: {e}")
         lock.release()
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
