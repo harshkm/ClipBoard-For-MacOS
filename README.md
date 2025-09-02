@@ -14,9 +14,6 @@ This directory contains everything you need to build the Forever Clipboard macOS
 ### **Option 1: Using the Main Build Script (Recommended)**
 
 ```bash
-# Make sure you're in this directory
-cd forever_clipboard_app_builder
-
 # Run the build script
 ./setup_macos_app.sh
 ```
@@ -31,9 +28,6 @@ This script will:
 ### **Option 2: Using the Python Build Script**
 
 ```bash
-# Make sure you're in this directory
-cd forever_clipboard_app_builder
-
 # Run the Python build script
 python build_macos_app.py
 ```
