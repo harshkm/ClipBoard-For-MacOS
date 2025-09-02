@@ -44,8 +44,8 @@ class BeautifulConfirmDialog(QDialog):
         container.setObjectName("dialogContainer")
         container.setStyleSheet("""
             QFrame#dialogContainer {
-                background: #1e1e1e;
-                border: 1px solid #333333;
+                background: #0a0a0a;
+                border: 1px solid #2a2a2a;
                 border-radius: 12px;
             }
         """)
@@ -90,19 +90,19 @@ class BeautifulConfirmDialog(QDialog):
         no_button.setFixedSize(100, 40)
         no_button.setStyleSheet("""
             QPushButton {
-                background: #333333;
+                background: #2a2a2a;
                 color: #ffffff;
-                border: 1px solid #444444;
+                border: 1px solid #3a3a3a;
                 border-radius: 8px;
                 font-weight: 500;
                 font-size: 13px;
             }
             QPushButton:hover {
-                background: #404040;
-                border-color: #555555;
+                background: #3a3a3a;
+                border-color: #4a4a4a;
             }
             QPushButton:pressed {
-                background: #2a2a2a;
+                background: #222222;
             }
         """)
         no_button.clicked.connect(self.reject)
@@ -116,7 +116,7 @@ class BeautifulConfirmDialog(QDialog):
         yes_button.setFixedSize(100, 40)
         yes_button.setStyleSheet("""
             QPushButton {
-                background: #FF3B30;
+                background: #e74c3c;
                 color: #ffffff;
                 border: none;
                 border-radius: 8px;
@@ -124,10 +124,10 @@ class BeautifulConfirmDialog(QDialog):
                 font-size: 13px;
             }
             QPushButton:hover {
-                background: #D70015;
+                background: #c0392b;
             }
             QPushButton:pressed {
-                background: #B80012;
+                background: #a93226;
             }
         """)
         yes_button.clicked.connect(self.accept)
@@ -355,15 +355,15 @@ class ClipboardManagerGUI(QMainWindow):
         self.search_input.setStyleSheet("""
             QLineEdit {
                 padding: 8px;
-                border: 2px solid #404040;
+                border: 2px solid #2a2a2a;
                 border-radius: 8px;
                 font-size: 14px;
-                background: #2d2d2d;
+                background: #1a1a1a;
                 color: #ffffff;
             }
             QLineEdit:focus {
-                border-color: #007AFF;
-                background: #333333;
+                border-color: #4a90e2;
+                background: #222222;
             }
         """)
         search_layout.addWidget(self.search_input)
@@ -374,14 +374,18 @@ class ClipboardManagerGUI(QMainWindow):
         clear_btn.setStyleSheet("""
             QPushButton {
                 padding: 8px 16px;
-                background: #FF3B30;
+                background: #e74c3c;
                 color: white;
                 border: none;
                 border-radius: 8px;
                 font-weight: bold;
+                font-size: 13px;
             }
             QPushButton:hover {
-                background: #D70015;
+                background: #c0392b;
+            }
+            QPushButton:pressed {
+                background: #a93226;
             }
         """)
         search_layout.addWidget(clear_btn)
@@ -399,28 +403,28 @@ class ClipboardManagerGUI(QMainWindow):
         self.history_list.selectionModel().selectionChanged.connect(self.on_selection_changed)
         self.history_list.setStyleSheet("""
             QListWidget {
-                border: 2px solid #404040;
+                border: 2px solid #2a2a2a;
                 border-radius: 8px;
-                background: #2d2d2d;
+                background: #1a1a1a;
                 color: #ffffff;
                 font-size: 13px;
             }
             QListWidget::item {
                 padding: 8px;
-                border-bottom: 1px solid #404040;
-                background: #2d2d2d;
+                border-bottom: 1px solid #2a2a2a;
+                background: #1a1a1a;
                 color: #ffffff;
             }
             QListWidget::item:selected {
-                background: #007AFF;
+                background: #4a90e2;
                 color: #ffffff;
             }
             QListWidget::item:alternate {
-                background: #333333;
+                background: #222222;
                 color: #ffffff;
             }
             QListWidget::item:hover {
-                background: #404040;
+                background: #2a2a2a;
                 color: #ffffff;
             }
         """)
@@ -435,16 +439,19 @@ class ClipboardManagerGUI(QMainWindow):
         self.selection_mode_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 12px;
-                background: #404040;
+                background: #2a2a2a;
                 color: white;
-                border: 1px solid #555555;
+                border: 1px solid #3a3a3a;
                 border-radius: 6px;
                 font-weight: 500;
                 font-size: 12px;
             }
             QPushButton:hover {
-                background: #505050;
-                border-color: #666666;
+                background: #3a3a3a;
+                border-color: #4a4a4a;
+            }
+            QPushButton:pressed {
+                background: #222222;
             }
         """)
         selection_layout.addWidget(self.selection_mode_btn)
@@ -455,16 +462,19 @@ class ClipboardManagerGUI(QMainWindow):
         self.clear_selection_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 12px;
-                background: #404040;
+                background: #2a2a2a;
                 color: white;
-                border: 1px solid #555555;
+                border: 1px solid #3a3a3a;
                 border-radius: 6px;
                 font-weight: 500;
                 font-size: 12px;
             }
             QPushButton:hover {
-                background: #505050;
-                border-color: #666666;
+                background: #3a3a3a;
+                border-color: #4a4a4a;
+            }
+            QPushButton:pressed {
+                background: #222222;
             }
         """)
         selection_layout.addWidget(self.clear_selection_btn)
@@ -478,7 +488,7 @@ class ClipboardManagerGUI(QMainWindow):
         self.bulk_delete_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 12px;
-                background: #FF3B30;
+                background: #e74c3c;
                 color: white;
                 border: none;
                 border-radius: 6px;
@@ -486,7 +496,10 @@ class ClipboardManagerGUI(QMainWindow):
                 font-size: 12px;
             }
             QPushButton:hover {
-                background: #D70015;
+                background: #c0392b;
+            }
+            QPushButton:pressed {
+                background: #a93226;
             }
         """)
         selection_layout.addWidget(self.bulk_delete_btn)
@@ -526,9 +539,9 @@ class ClipboardManagerGUI(QMainWindow):
         self.content_viewer.setFont(QFont("Monaco", 11))
         self.content_viewer.setStyleSheet("""
             QTextEdit {
-                border: 2px solid #404040;
+                border: 2px solid #2a2a2a;
                 border-radius: 8px;
-                background: #2d2d2d;
+                background: #1a1a1a;
                 color: #ffffff;
                 padding: 12px;
                 font-family: 'Monaco', 'Menlo', monospace;
@@ -547,7 +560,7 @@ class ClipboardManagerGUI(QMainWindow):
         export_btn.setStyleSheet("""
             QPushButton {
                 padding: 12px 24px;
-                background: #34C759;
+                background: #27ae60;
                 color: white;
                 border: none;
                 border-radius: 8px;
@@ -555,7 +568,10 @@ class ClipboardManagerGUI(QMainWindow):
                 font-size: 14px;
             }
             QPushButton:hover {
-                background: #28A745;
+                background: #229954;
+            }
+            QPushButton:pressed {
+                background: #1e8449;
             }
         """)
         actions_layout.addWidget(export_btn)
@@ -573,14 +589,14 @@ class ClipboardManagerGUI(QMainWindow):
         self.storage_progress.setMaximum(100)
         self.storage_progress.setStyleSheet("""
             QProgressBar {
-                border: 2px solid #404040;
+                border: 2px solid #2a2a2a;
                 border-radius: 8px;
                 text-align: center;
-                background: #2d2d2d;
+                background: #1a1a1a;
                 color: #ffffff;
             }
             QProgressBar::chunk {
-                background: #007AFF;
+                background: #4a90e2;
                 border-radius: 6px;
             }
         """)
@@ -630,27 +646,30 @@ class ClipboardManagerGUI(QMainWindow):
         search_shortcut.activated.connect(lambda: self.search_input.setFocus())
         
     def apply_styling(self):
-        """Apply modern dark styling to the application"""
+        """Apply modern dark styling to the application with cohesive color palette"""
         self.setStyleSheet("""
             QMainWindow {
-                background: #1e1e1e;
+                background: #0a0a0a;
                 color: #ffffff;
             }
             QWidget {
-                background: #1e1e1e;
+                background: #0a0a0a;
                 color: #ffffff;
             }
             QMenu {
-                background: #2d2d2d;
+                background: #1a1a1a;
                 color: #ffffff;
-                border: 1px solid #404040;
+                border: 1px solid #2a2a2a;
+                border-radius: 8px;
             }
             QMenu::item:selected {
-                background: #007AFF;
+                background: #4a90e2;
+                border-radius: 4px;
             }
             QStatusBar {
-                background: #2d2d2d;
+                background: #1a1a1a;
                 color: #ffffff;
+                border-top: 1px solid #2a2a2a;
             }
         """)
         
@@ -891,16 +910,19 @@ class ClipboardManagerGUI(QMainWindow):
             self.selection_mode_btn.setStyleSheet("""
                 QPushButton {
                     padding: 6px 12px;
-                    background: #007AFF;
+                    background: #4a90e2;
                     color: white;
-                    border: 1px solid #0056CC;
+                    border: 1px solid #357abd;
                     border-radius: 6px;
                     font-weight: 500;
                     font-size: 12px;
                 }
                 QPushButton:hover {
-                    background: #0056CC;
-                    border-color: #004499;
+                    background: #357abd;
+                    border-color: #2e6da4;
+                }
+                QPushButton:pressed {
+                    background: #2e6da4;
                 }
             """)
             # Connect checkbox state changes to selection handler
@@ -912,16 +934,19 @@ class ClipboardManagerGUI(QMainWindow):
             self.selection_mode_btn.setStyleSheet("""
                 QPushButton {
                     padding: 6px 12px;
-                    background: #404040;
+                    background: #2a2a2a;
                     color: white;
-                    border: 1px solid #555555;
+                    border: 1px solid #3a3a3a;
                     border-radius: 6px;
                     font-weight: 500;
                     font-size: 12px;
                 }
                 QPushButton:hover {
-                    background: #505050;
-                    border-color: #666666;
+                    background: #3a3a3a;
+                    border-color: #4a4a4a;
+                }
+                QPushButton:pressed {
+                    background: #222222;
                 }
             """)
             # Disconnect checkbox state changes from selection handler
