@@ -255,6 +255,8 @@ class ClipboardManagerGUI(QMainWindow):
         self.storage = ClipboardStorage()
         self.monitor_thread = ClipboardMonitorThread()
         self.selection_mode = False  # Track if selection mode is enabled
+        self.edit_mode = False  # Track if edit mode is enabled
+        self.current_edited_entry = None  # Track which entry is being edited
         
         # Connect signals
         self.monitor_thread.clipboard_changed.connect(self.on_clipboard_changed)
@@ -555,6 +557,54 @@ class ClipboardManagerGUI(QMainWindow):
         # Add some spacing on the left
         actions_layout.addStretch()
         
+        # Edit button
+        self.edit_btn = QPushButton("✏️ Edit")
+        self.edit_btn.clicked.connect(self.toggle_edit_mode)
+        self.edit_btn.setStyleSheet("""
+            QPushButton {
+                padding: 12px 24px;
+                background: #4a90e2;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #357abd;
+            }
+            QPushButton:pressed {
+                background: #2e6da4;
+            }
+        """)
+        actions_layout.addWidget(self.edit_btn)
+        
+        # Save button (initially hidden)
+        self.save_btn = QPushButton("💾 Save")
+        self.save_btn.clicked.connect(self.save_edited_content)
+        self.save_btn.setVisible(False)
+        self.save_btn.setStyleSheet("""
+            QPushButton {
+                padding: 12px 24px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #229954;
+            }
+            QPushButton:pressed {
+                background: #1e8449;
+            }
+        """)
+        actions_layout.addWidget(self.save_btn)
+        
+        # Add spacing between buttons
+        actions_layout.addSpacing(12)
+        
         export_btn = QPushButton("📤 Export Clipboard Data")
         export_btn.clicked.connect(self.export_clipboard_data)
         export_btn.setStyleSheet("""
@@ -761,12 +811,36 @@ class ClipboardManagerGUI(QMainWindow):
         """Handle history item selection"""
         entry = item.data(Qt.ItemDataRole.UserRole)
         if entry:
-            self.content_viewer.setText(entry['content'])
+            # Set the current edited entry
+            self.current_edited_entry = entry
             
-            # Update entry info
-            timestamp = entry['timestamp']
-            size_kb = entry['size_bytes'] / 1024
-            self.entry_info.setText(f"📅 {timestamp} • 📏 {size_kb:.1f} KB • 🏷️ {entry['content_type']}")
+            # Exit edit mode if we were editing a different entry
+            if self.edit_mode:
+                self.edit_mode = False
+                self.content_viewer.setReadOnly(True)
+                self.edit_btn.setText("✏️ Edit")
+                self.edit_btn.setStyleSheet("""
+                    QPushButton {
+                        padding: 12px 24px;
+                        background: #4a90e2;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-weight: bold;
+                        font-size: 14px;
+                    }
+                    QPushButton:hover {
+                        background: #357abd;
+                    }
+                    QPushButton:pressed {
+                        background: #2e6da4;
+                    }
+                """)
+                self.save_btn.setVisible(False)
+                self.statusBar().showMessage("👁️ Switched to view mode for new entry", 3000)
+            
+            # Update the display
+            self.update_entry_display(entry)
             
     def on_history_item_double_clicked(self, item: QListWidgetItem):
         """Handle double-click on history item - copy to clipboard"""
@@ -1105,6 +1179,131 @@ class ClipboardManagerGUI(QMainWindow):
                 self.monitor_thread.stop()
         except:
             pass
+            
+    def toggle_edit_mode(self):
+        """Toggle between view and edit modes"""
+        if not self.current_edited_entry:
+            self.statusBar().showMessage("⚠️ No entry selected for editing", 3000)
+            return
+            
+        self.edit_mode = not self.edit_mode
+        
+        if self.edit_mode:
+            # Enable edit mode
+            self.content_viewer.setReadOnly(False)
+            self.edit_btn.setText("👁️ View")
+            self.edit_btn.setStyleSheet("""
+                QPushButton {
+                    padding: 12px 24px;
+                    background: #f39c12;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background: #e67e22;
+                }
+                QPushButton:pressed {
+                    background: #d35400;
+                }
+            """)
+            self.save_btn.setVisible(True)
+            self.statusBar().showMessage("✏️ Edit mode active - You can now edit the content", 3000)
+        else:
+            # Disable edit mode
+            self.content_viewer.setReadOnly(True)
+            self.edit_btn.setText("✏️ Edit")
+            self.edit_btn.setStyleSheet("""
+                QPushButton {
+                    padding: 12px 24px;
+                    background: #4a90e2;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background: #357abd;
+                }
+                QPushButton:pressed {
+                    background: #2e6da4;
+                }
+            """)
+            self.save_btn.setVisible(False)
+            self.statusBar().showMessage("👁️ View mode active - Content is read-only", 3000)
+            
+    def save_edited_content(self):
+        """Save the edited content back to storage"""
+        if not self.edit_mode or not self.current_edited_entry:
+            return
+            
+        try:
+            # Get the edited content
+            new_content = self.content_viewer.toPlainText()
+            
+            # Validate content
+            if not new_content.strip():
+                QMessageBox.warning(self, "Invalid Content", "Content cannot be empty!")
+                return
+                
+            # Update the entry in storage
+            self.storage.update_entry_content(
+                self.current_edited_entry['id'], 
+                new_content
+            )
+            
+            # Exit edit mode
+            self.edit_mode = False
+            self.content_viewer.setReadOnly(True)
+            self.edit_btn.setText("✏️ Edit")
+            self.edit_btn.setStyleSheet("""
+                QPushButton {
+                    padding: 12px 24px;
+                    background: #4a90e2;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background: #357abd;
+                }
+                QPushButton:pressed {
+                    background: #2e6da4;
+                }
+            """)
+            self.save_btn.setVisible(False)
+            
+            # Reload the history to show updated preview
+            self.load_clipboard_history()
+            
+            # Update the current entry info
+            self.current_edited_entry = self.storage.get_entry_by_id(self.current_edited_entry['id'])
+            if self.current_edited_entry:
+                self.update_entry_display(self.current_edited_entry)
+            
+            self.statusBar().showMessage("✅ Content saved successfully!", 3000)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Save Error", f"Failed to save content:\n{str(e)}")
+            self.statusBar().showMessage("❌ Failed to save content", 3000)
+            
+    def update_entry_display(self, entry):
+        """Update the entry display with new content"""
+        if not entry:
+            return
+            
+        # Update content viewer
+        self.content_viewer.setText(entry['content'])
+        
+        # Update entry info
+        timestamp = entry['timestamp']
+        size_kb = entry['size_bytes'] / 1024
+        self.entry_info.setText(f"📅 {timestamp} • 📏 {size_kb:.1f} KB • 🏷️ {entry['content_type']}")
 
 
 def main():

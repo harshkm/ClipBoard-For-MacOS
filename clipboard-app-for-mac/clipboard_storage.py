@@ -149,6 +149,74 @@ class ClipboardStorage:
             print(f"Error searching clipboard entries: {e}")
             return []
             
+    def update_entry_content(self, entry_id: int, new_content: str) -> bool:
+        """Update the content of a specific clipboard entry"""
+        if not new_content or not new_content.strip():
+            return False
+            
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Get the old entry to calculate new values
+            cursor.execute('SELECT content FROM clipboard_entries WHERE id = ?', (entry_id,))
+            old_entry = cursor.fetchone()
+            
+            if not old_entry:
+                conn.close()
+                return False
+                
+            # Calculate new values
+            new_content_hash = hashlib.md5(new_content.encode('utf-8')).hexdigest()
+            new_preview = self._create_preview(new_content)
+            new_size_bytes = len(new_content.encode('utf-8'))
+            new_content_type = self._detect_content_type(new_content)
+            
+            # Update the entry
+            cursor.execute('''
+                UPDATE clipboard_entries 
+                SET content = ?, content_hash = ?, preview = ?, size_bytes = ?, content_type = ?
+                WHERE id = ?
+            ''', (new_content, new_content_hash, new_preview, new_size_bytes, new_content_type, entry_id))
+            
+            conn.commit()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            print(f"Error updating entry content: {e}")
+            return False
+            
+    def get_entry_by_id(self, entry_id: int) -> Dict:
+        """Get a specific clipboard entry by ID"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, content, preview, timestamp, size_bytes, content_type
+                FROM clipboard_entries
+                WHERE id = ?
+            ''', (entry_id,))
+            
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row:
+                return {
+                    'id': row[0],
+                    'content': row[1],
+                    'preview': row[2],
+                    'timestamp': row[3],
+                    'size_bytes': row[4],
+                    'content_type': row[5]
+                }
+            return None
+            
+        except Exception as e:
+            print(f"Error getting entry by ID: {e}")
+            return None
+            
     def delete_entry(self, entry_id: int) -> bool:
         """Delete a specific clipboard entry"""
         try:
