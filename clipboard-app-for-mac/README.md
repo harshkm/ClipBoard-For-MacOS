@@ -14,6 +14,34 @@ A powerful, forever-running clipboard history manager for macOS that automatical
 - **📤 Export Functionality**: Save clipboard data to files
 - **⚡ Zero Maintenance**: Works automatically without intervention
 
+## 📝 **Changelog**
+
+### **Version 4.0.1 - Additional Features**
+- ✅ **Added View Tab while editing**
+
+### **Version 4.0.0 - Additional Features**
+- ✅ **Added bulk selection feature** with selection & delete selected
+- ✅ **Added Edit on the go feature** with attached notepad
+
+### **Version 3.0.0 - MacOS Application**
+- ✅ **Created an easy to setup app** Checkout README.md in parent Directory
+- ✅ **New updated GUI** with basic Features
+
+### **Version 2.0.0 - Forever Running**
+- ✅ **Auto-start on login** with LaunchAgent
+- ✅ **Forever running** in background
+- ✅ **Dark theme GUI** with perfect visibility
+- ✅ **Zero maintenance** operation
+- ✅ **Comprehensive management** scripts
+- ✅ **100% dynamic paths** - works on any Mac
+
+### **Version 1.0.0 - Basic Features**
+- ✅ **Clipboard monitoring** and capture
+- ✅ **SQLite storage** with indexing
+- ✅ **Search and filter** functionality
+- ✅ **Export capabilities**
+- ✅ **System tray integration**
+
 ## 🚀 **Quick Start (One Command!)**
 
 ** VERY IMPORTANT **
@@ -278,33 +306,6 @@ git pull origin main  # If using git
 ```bash
 ps aux | grep clipboard_manager_gui
 ```
-
-## 📝 **Changelog**
-
-### **Version 2.0.0 - Forever Running**
-- ✅ **Auto-start on login** with LaunchAgent
-- ✅ **Forever running** in background
-- ✅ **Dark theme GUI** with perfect visibility
-- ✅ **Zero maintenance** operation
-- ✅ **Comprehensive management** scripts
-- ✅ **100% dynamic paths** - works on any Mac
-
-### **Version 1.0.0 - Basic Features**
-- ✅ **Clipboard monitoring** and capture
-- ✅ **SQLite storage** with indexing
-- ✅ **Search and filter** functionality
-- ✅ **Export capabilities**
-- ✅ **System tray integration**
-
-## 🎉 **Success!**
-
-Your clipboard manager is now:
-- ✅ **Running forever** in the background
-- ✅ **Auto-starting** on every login
-- ✅ **Capturing everything** you copy
-- ✅ **Never stopping** until you want it to
-- ✅ **Beautiful dark interface** with perfect visibility
-- ✅ **Zero maintenance** required
 
 **Just use your Mac normally with `Cmd+C` and `Cmd+V` - it will capture everything automatically and run forever!** 🎉
 
