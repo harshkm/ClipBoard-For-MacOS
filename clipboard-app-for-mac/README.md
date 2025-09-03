@@ -1,4 +1,4 @@
-# 🚀 Clipboard Manager Pro - Forever Running
+# 🚀 Forever Clipboard Pro - Forever Running
 
 A powerful, forever-running clipboard history manager for macOS that automatically starts on login and runs continuously in the background. Similar to CopyClip but with enhanced features, massive storage capacity, and automatic operation.
 
