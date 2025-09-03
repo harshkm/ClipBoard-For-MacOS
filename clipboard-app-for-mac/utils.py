@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Optional
 from PySide6.QtGui import QIcon
 
-
 def get_data_directory() -> Path:
     """Get the application data directory for ForeverClipboard"""
     # Use Application Support directory on macOS

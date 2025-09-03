@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QSystemTrayIcon, QMenu, QMessageBox,
                                QProgressBar, QFileDialog, QDialog, QFrame)
 from PySide6.QtCore import Qt, QThread, Signal, QTimer, QCoreApplication
-from PySide6.QtGui import QFont, QKeySequence, QShortcut, QAction, QIcon
+from PySide6.QtGui import QFont, QKeySequence, QShortcut, QAction
 import pyperclip
 
 # Import our existing modules
@@ -254,7 +254,7 @@ class ClipboardManagerGUI(QMainWindow):
         self.settings = SettingsManager()
         self.storage = ClipboardStorage()
         self.monitor_thread = ClipboardMonitorThread()
-        self.selection_mode = False  # Track if selection mode is enabled
+        self.selection_mode = True  # Selection mode is always enabled
         self.edit_mode = False  # Track if edit mode is enabled
         self.current_edited_entry = None  # Track which entry is being edited
         
@@ -263,6 +263,10 @@ class ClipboardManagerGUI(QMainWindow):
         
         self.init_ui()
         self.setup_shortcuts()
+        
+        # Connect checkbox state changes to selection handler (selection mode is always enabled)
+        self.history_list.itemChanged.connect(self.on_selection_changed)
+        
         self.load_clipboard_history()
         
         # Start monitoring clipboard
@@ -434,29 +438,6 @@ class ClipboardManagerGUI(QMainWindow):
         
         # Selection controls
         selection_layout = QHBoxLayout()
-        
-        # Enable Selection Mode button
-        self.selection_mode_btn = QPushButton("☐ Enable Selection Mode")
-        self.selection_mode_btn.clicked.connect(self.toggle_selection_mode)
-        self.selection_mode_btn.setStyleSheet("""
-            QPushButton {
-                padding: 6px 12px;
-                background: #2a2a2a;
-                color: white;
-                border: 1px solid #3a3a3a;
-                border-radius: 6px;
-                font-weight: 500;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background: #3a3a3a;
-                border-color: #4a4a4a;
-            }
-            QPushButton:pressed {
-                background: #222222;
-            }
-        """)
-        selection_layout.addWidget(self.selection_mode_btn)
         
         # Clear Selection button
         self.clear_selection_btn = QPushButton("Clear Selection")
@@ -766,10 +747,9 @@ class ClipboardManagerGUI(QMainWindow):
             tooltip = entry['content'][:200] + "..." if len(entry['content']) > 200 else entry['content']
             item.setToolTip(tooltip)
             
-            # Enable checkboxes when in selection mode
-            if self.selection_mode:
-                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                item.setCheckState(Qt.CheckState.Unchecked)
+            # Checkboxes are always enabled (selection mode is always on)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Unchecked)
             
             self.history_list.addItem(item)
             
@@ -800,10 +780,9 @@ class ClipboardManagerGUI(QMainWindow):
             item.setText(preview_text)
             item.setData(Qt.ItemDataRole.UserRole, entry)
             
-            # Enable checkboxes when in selection mode
-            if self.selection_mode:
-                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                item.setCheckState(Qt.CheckState.Unchecked)
+            # Checkboxes are always enabled (selection mode is always on)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Unchecked)
             
             self.history_list.addItem(item)
             
@@ -874,26 +853,25 @@ class ClipboardManagerGUI(QMainWindow):
         # Separator
         context_menu.addSeparator()
         
-        # Multi-selection actions (only show if in selection mode and multiple items are checked)
-        if self.selection_mode:
-            checked_count = 0
-            for i in range(self.history_list.count()):
-                item = self.history_list.item(i)
-                if item.flags() & Qt.ItemFlag.ItemIsUserCheckable and item.checkState() == Qt.CheckState.Checked:
-                    checked_count += 1
+        # Multi-selection actions (selection mode is always enabled)
+        checked_count = 0
+        for i in range(self.history_list.count()):
+            item = self.history_list.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable and item.checkState() == Qt.CheckState.Checked:
+                checked_count += 1
+        
+        if checked_count > 1:
+            # Copy all checked
+            copy_selected_action = QAction(f"📋 Copy {checked_count} Selected", self)
+            copy_selected_action.triggered.connect(self.copy_selected_entries)
+            context_menu.addAction(copy_selected_action)
             
-            if checked_count > 1:
-                # Copy all checked
-                copy_selected_action = QAction(f"📋 Copy {checked_count} Selected", self)
-                copy_selected_action.triggered.connect(self.copy_selected_entries)
-                context_menu.addAction(copy_selected_action)
-                
-                # Delete all checked
-                delete_selected_action = QAction(f"🗑️ Delete {checked_count} Selected", self)
-                delete_selected_action.triggered.connect(self.bulk_delete_selected)
-                context_menu.addAction(delete_selected_action)
-                
-                context_menu.addSeparator()
+            # Delete all checked
+            delete_selected_action = QAction(f"🗑️ Delete {checked_count} Selected", self)
+            delete_selected_action.triggered.connect(self.bulk_delete_selected)
+            context_menu.addAction(delete_selected_action)
+            
+            context_menu.addSeparator()
         
         # Entry info
         info_action = QAction(f"📅 {entry['timestamp']} • 📏 {entry['size_bytes']/1024:.1f} KB", self)
@@ -936,8 +914,7 @@ class ClipboardManagerGUI(QMainWindow):
                 
     def copy_selected_entries(self):
         """Copy all selected entries to clipboard (concatenated)"""
-        if not self.selection_mode:
-            return
+        # Selection mode is always enabled
             
         # Count and collect checked items
         checked_items = []
@@ -974,66 +951,11 @@ class ClipboardManagerGUI(QMainWindow):
             self.content_viewer.clear()
             self.entry_info.setText("No entry selected")
             
-    def toggle_selection_mode(self):
-        """Toggle between normal and selection mode"""
-        self.selection_mode = not self.selection_mode
-        
-        if self.selection_mode:
-            # Enable selection mode
-            self.selection_mode_btn.setText("☑ Selection Mode Active")
-            self.selection_mode_btn.setStyleSheet("""
-                QPushButton {
-                    padding: 6px 12px;
-                    background: #4a90e2;
-                    color: white;
-                    border: 1px solid #357abd;
-                    border-radius: 6px;
-                    font-weight: 500;
-                    font-size: 12px;
-                }
-                QPushButton:hover {
-                    background: #357abd;
-                    border-color: #2e6da4;
-                }
-                QPushButton:pressed {
-                    background: #2e6da4;
-                }
-            """)
-            # Connect checkbox state changes to selection handler
-            self.history_list.itemChanged.connect(self.on_selection_changed)
-            self.load_clipboard_history()  # Refresh to show checkboxes
-        else:
-            # Disable selection mode
-            self.selection_mode_btn.setText("☐ Enable Selection Mode")
-            self.selection_mode_btn.setStyleSheet("""
-                QPushButton {
-                    padding: 6px 12px;
-                    background: #2a2a2a;
-                    color: white;
-                    border: 1px solid #3a3a3a;
-                    border-radius: 6px;
-                    font-weight: 500;
-                    font-size: 12px;
-                }
-                QPushButton:hover {
-                    background: #3a3a3a;
-                    border-color: #4a4a4a;
-                }
-                QPushButton:pressed {
-                    background: #222222;
-                }
-            """)
-            # Disconnect checkbox state changes from selection handler
-            try:
-                self.history_list.itemChanged.disconnect(self.on_selection_changed)
-            except:
-                pass  # Ignore if not connected
-            self.load_clipboard_history()  # Refresh to hide checkboxes
+        # Selection mode is now always enabled, no toggle method needed
             
     def on_selection_changed(self):
         """Handle selection changes to show/hide bulk delete button"""
-        if not self.selection_mode:
-            return
+        # Selection mode is always enabled
             
         # Count checked items
         checked_count = 0
@@ -1052,8 +974,7 @@ class ClipboardManagerGUI(QMainWindow):
             
     def clear_selection(self):
         """Clear all checkbox selections in the history list"""
-        if not self.selection_mode:
-            return
+        # Selection mode is always enabled
             
         for i in range(self.history_list.count()):
             item = self.history_list.item(i)
@@ -1065,8 +986,7 @@ class ClipboardManagerGUI(QMainWindow):
         
     def bulk_delete_selected(self):
         """Delete all checked entries"""
-        if not self.selection_mode:
-            return
+        # Selection mode is always enabled
             
         # Count and collect checked items
         checked_entries = []
