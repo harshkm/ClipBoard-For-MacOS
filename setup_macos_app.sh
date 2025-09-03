@@ -40,46 +40,162 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
-# Get the main work_dir path (parent of current directory)
-MAIN_WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MAIN_VENV_PATH="$MAIN_WORK_DIR/.venv"
+# Function to check if virtual environment has required packages
+check_venv_packages() {
+    local venv_path="$1"
+    if [[ -d "$venv_path" ]]; then
+        source "$venv_path/bin/activate"
+        if python -c "import PySide6, pyperclip" 2>/dev/null; then
+            print_success "Virtual environment ready: $venv_path"
+            return 0
+        else
+            print_warning "Virtual environment exists but missing packages: $venv_path"
+            return 1
+        fi
+    fi
+    return 1
+}
 
-print_status "Using main work directory: $MAIN_WORK_DIR"
-print_status "Using main virtual environment: $MAIN_VENV_PATH"
+# Function to install packages in current environment
+install_required_packages() {
+    print_status "Installing required packages..."
+    if pip install PySide6 pyperclip pyinstaller; then
+        print_success "Required packages installed successfully"
+        return 0
+    else
+        print_error "Failed to install packages with pip"
+        return 1
+    fi
+}
 
-# Check if main .venv exists
-if [[ ! -d "$MAIN_VENV_PATH" ]]; then
-    print_error "Main virtual environment not found at: $MAIN_VENV_PATH"
-    print_error "Please ensure you have a .venv in your main work_dir"
-    exit 1
-fi
+# Function to create and setup local virtual environment
+create_local_venv() {
+    print_status "Creating local virtual environment..."
+    
+    # Check if python3 is available
+    if ! command -v python3 &> /dev/null; then
+        print_error "python3 not found. Please install Python 3.8+"
+        exit 1
+    fi
+    
+    # Create virtual environment
+    if python3 -m venv .venv; then
+        print_success "Local virtual environment created"
+        
+        # Activate and install packages
+        source .venv/bin/activate
+        if install_required_packages; then
+            print_success "Local virtual environment ready"
+            return 0
+        else
+            print_error "Failed to setup local virtual environment"
+            return 1
+        fi
+    else
+        print_error "Failed to create local virtual environment"
+        return 1
+    fi
+}
 
-# Check if main .venv has required packages
-print_status "Checking main virtual environment packages..."
-source "$MAIN_VENV_PATH/bin/activate"
+# Function to use system Python with user packages
+use_system_python() {
+    print_status "Using system Python with user packages..."
+    
+    # Check if python3 is available
+    if ! command -v python3 &> /dev/null; then
+        print_error "python3 not found. Please install Python 3.8+"
+        exit 1
+    fi
+    
+    # Check if pip3 is available
+    if ! command -v pip3 &> /dev/null; then
+        print_error "pip3 not found. Please install pip"
+        exit 1
+    fi
+    
+    # Install packages for current user
+    print_status "Installing packages for current user..."
+    if pip3 install --user PySide6 pyperclip pyinstaller; then
+        print_success "User packages installed successfully"
+        return 0
+    fi
+    
+    # Try alternative pip command
+    if pip install --user PySide6 pyperclip pyinstaller; then
+        print_success "User packages installed successfully"
+        return 0
+    else
+        print_error "Failed to install user packages"
+        return 1
+    fi
+}
 
-if ! python -c "import PySide6, pyperclip" 2>/dev/null; then
-    print_error "Required packages not found in main .venv"
-    print_error "Please install: PySide6 and pyperclip"
-    exit 1
-fi
+# Determine Python environment strategy
+PYTHON_CMD=""
+VENV_ACTIVATED=false
 
-print_success "Main virtual environment is ready with required packages"
+print_status "Detecting Python environment..."
 
-# Check if PyInstaller is available
-if ! command -v pyinstaller &> /dev/null; then
-    print_status "Installing PyInstaller in main .venv..."
-    pip install pyinstaller
-    print_success "PyInstaller installed"
+# Strategy 1: Check if parent .venv exists and has packages
+PARENT_WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PARENT_VENV_PATH="$PARENT_WORK_DIR/.venv"
+
+if check_venv_packages "$PARENT_VENV_PATH"; then
+    print_status "Using parent virtual environment: $PARENT_VENV_PATH"
+    source "$PARENT_VENV_PATH/bin/activate"
+    VENV_ACTIVATED=true
+    PYTHON_CMD="python"
+    
+# Strategy 2: Check if local .venv exists and has packages
+elif check_venv_packages ".venv"; then
+    print_status "Using local virtual environment: .venv"
+    source .venv/bin/activate
+    VENV_ACTIVATED=true
+    PYTHON_CMD="python"
+    
+# Strategy 3: Create local .venv
+elif create_local_venv; then
+    print_status "Using newly created local virtual environment"
+    VENV_ACTIVATED=true
+    PYTHON_CMD="python"
+    
+# Strategy 4: Use system Python with user packages
+elif use_system_python; then
+    print_status "Using system Python with user packages"
+    PYTHON_CMD="python3"
+    
 else
-    print_success "PyInstaller already available"
+    print_error "Failed to setup any Python environment"
+    print_error "Please ensure Python 3.8+ and pip are installed"
+    exit 1
 fi
+
+# Verify PyInstaller is available
+if ! command -v pyinstaller &> /dev/null; then
+    print_status "PyInstaller not found, installing..."
+    if [[ "$VENV_ACTIVATED" == true ]]; then
+        pip install pyinstaller
+    else
+        pip3 install --user pyinstaller
+    fi
+    
+    if ! command -v pyinstaller &> /dev/null; then
+        print_error "Failed to install PyInstaller"
+        exit 1
+    fi
+fi
+
+print_success "Python environment ready with all required packages"
 
 # Create app icon if it doesn't exist
 if [[ ! -f "clipboard-app-for-mac/icon.icns" ]]; then
     print_status "Creating app icon..."
-    python create_icon.py
-    print_success "App icon created"
+    if [[ -f "create_icon.py" ]]; then
+        $PYTHON_CMD create_icon.py
+        print_success "App icon created"
+    else
+        print_warning "create_icon.py not found, skipping icon creation"
+    fi
 else
     print_success "App icon already exists"
 fi
